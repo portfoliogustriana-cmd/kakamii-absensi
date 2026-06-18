@@ -97,25 +97,33 @@ app.post('/login', async (req, res) => {
     const { username, password } = req.body;
     const userClean = username.toLowerCase().trim();
 
+    // Membuka koneksi khusus untuk proses login ini saja
+    const client = await pool.connect();
+
     try {
         if (userClean === 'admin') {
-            const config = await pool.query("SELECT password_admin FROM pengaturan WHERE id = 1");
-            if (password === config.rows[0].password_admin) {
+            const config = await client.query("SELECT password_admin FROM pengaturan WHERE id = 1");
+            if (config.rowCount > 0 && password === config.rows[0].password_admin) {
                 return res.redirect('/admin');
             } else {
                 return res.render('login', { error: 'Password Admin salah!', success: null });
             }
         } else {
-            const result = await pool.query("SELECT * FROM karyawan WHERE username = $1 AND password = $2", [userClean, password]);
+            const result = await client.query("SELECT * FROM karyawan WHERE username = $1 AND password = $2", [userClean, password]);
             if (result.rowCount > 0) { 
                 res.redirect('/absen?user=' + userClean); 
             } else { 
                 res.render('login', { error: 'Username atau Password salah!', success: null }); 
             }
         }
-    } catch (err) { res.status(500).send("Error server login"); }
+    } catch (err) { 
+        console.error(err);
+        res.status(500).send("Error server login"); 
+    } finally {
+        // WAJIB VERCEL: Tutup dan kembalikan koneksi ke pool agar server tidak hang/timeout
+        client.release();
+    }
 });
-
 app.get('/register', (req, res) => { res.render('register', { error: null }); });
 
 app.post('/register', async (req, res) => {
