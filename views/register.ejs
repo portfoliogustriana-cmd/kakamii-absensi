@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daftar Akun Karyawan</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-gray-50 flex items-center justify-center min-h-screen px-4">
+    <div class="bg-white p-6 rounded-2xl shadow-xl w-full max-w-sm border border-gray-100">
+        <div class="text-center mb-5">
+            <h2 class="text-2xl font-bold text-gray-800">Daftar Akun</h2>
+            <p class="text-sm text-gray-500 mt-1">Buat akun absensi mandiri kamu</p>
+        </div>
+
+        <% if (error) { %><div class="bg-red-50 text-red-600 p-3 rounded-xl mb-4 text-sm text-center border border-red-100"><%= error %></div><% } %>
+
+        <form action="/register" method="POST" class="space-y-4">
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Username Baru</label>
+                <input type="text" name="username" required placeholder="Contoh: budi" class="w-full px-4 py-2.5 rounded-xl border outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Password</label>
+                <input type="password" name="password" required placeholder="Buat password kuat" class="w-full px-4 py-2.5 rounded-xl border outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Pertanyaan Keamanan (Untuk Lupa Password)</label>
+                <select name="pertanyaan" class="w-full px-3 py-2.5 rounded-xl border bg-white outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                    <option value="Siapa nama ibu kandungmu?">Siapa nama ibu kandungmu?</option>
+                    <option value="Apa nama hewan peliharaan pertamamu?">Apa nama hewan peliharaan pertamamu?</option>
+                    <option value="Apa nama sekolah SD mu dulu?">Apa nama sekolah SD mu dulu?</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Jawaban Rahasia Kamu</label>
+                <input type="text" name="jawaban" required placeholder="Jawaban rahasia" class="w-full px-4 py-2.5 rounded-xl border outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            
+            <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-blue-700 shadow-lg shadow-blue-100">Buat Akun Sekarang</button>
+        </form>
+        <div class="mt-4 text-center">
+            <a href="/" class="text-xs text-gray-500 hover:underline">Kembali ke Halaman Login</a>
+        </div>
+    </div>
+</body>
+</html>
