@@ -1,23 +1,22 @@
 const express = require('express');
-const { Pool } = require('pg'); // Berpindah dari sqlite3 ke pg (PostgreSQL)
+const { Pool } = require('pg');
 const path = require('path');
-const multer = require('multer');
 
 const app = express();
-const PORT = process.env.PORT || 3000; // Mendukung port dinamis dari hosting internet (Render)
+const PORT = process.env.PORT || 3000;
 
-// Alamat Database Supabase milikmu (Menggunakan port 6543 yang lebih stabil untuk pooling)
+// Alamat Database Supabase milikmu
 const connectionString = "postgresql://postgres:cdaaptnia26@db.xdmkxpnfewqnzaheklzg.supabase.co:6543/postgres";
 
 const pool = new Pool({
     connectionString: connectionString,
-    ssl: { rejectUnauthorized: false } // Wajib aktif agar koneksi ke cloud aman
+    ssl: { rejectUnauthorized: false }
 });
 
-// Otomatis Membuat Tabel di Supabase saat aplikasi pertama kali menyala di internet
+// Inisialisasi Database Supabase
 async function inisialisasiDatabase() {
     try {
-        // 1. Tabel Absensi (Menggunakan PostgreSQL syntax)
+        // Kolom foto diubah menjadi TEXT agar muat menampung string Base64 gambar
         await pool.query(`CREATE TABLE IF NOT EXISTS absensi (
             id SERIAL PRIMARY KEY,
             nama TEXT,
@@ -25,11 +24,10 @@ async function inisialisasiDatabase() {
             tipe TEXT,
             lokasi TEXT,
             jarak TEXT,
-            foto TEXT,
+            foto TEXT, 
             status_waktu TEXT
         )`);
 
-        // 2. Tabel Karyawan
         await pool.query(`CREATE TABLE IF NOT EXISTS karyawan (
             id SERIAL PRIMARY KEY,
             username TEXT UNIQUE,
@@ -38,7 +36,6 @@ async function inisialisasiDatabase() {
             jawaban TEXT
         )`);
 
-        // 3. Tabel Pengaturan Kantor
         await pool.query(`CREATE TABLE IF NOT EXISTS pengaturan (
             id INTEGER PRIMARY KEY,
             lat REAL,
@@ -49,7 +46,6 @@ async function inisialisasiDatabase() {
             password_admin TEXT
         )`);
 
-        // Masukkan data pengaturan default jika tabel masih kosong
         const cekConfig = await pool.query("SELECT id FROM pengaturan WHERE id = 1");
         if (cekConfig.rowCount === 0) {
             await pool.query(`INSERT INTO pengaturan (id, lat, lon, radius, jam_masuk, jam_pulang, password_admin) 
@@ -62,16 +58,9 @@ async function inisialisasiDatabase() {
 }
 inisialisasiDatabase();
 
-// Setup Upload Foto
-const storage = multer.diskStorage({
-    destination: './uploads/',
-    filename: (req, file, cb) => { cb(null, Date.now() + path.extname(file.originalname)); }
-});
-const upload = multer({ storage: storage });
-
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
-app.use('/uploads', express.static('uploads'));
+// Menerima input JSON & URL-Encoded lebih besar karena Base64 memakan memori teks
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.static('public'));
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -155,15 +144,14 @@ app.get('/absen', (req, res) => {
     res.render('absen', { user: req.query.user || 'Karyawan', error: req.query.error || null, success: req.query.success || null });
 });
 
-app.post('/absen', upload.single('foto'), async (req, res) => {
-    const { nama, tipe, lat, lon } = req.body;
-    const fotoPath = req.file ? '/uploads/' + req.file.filename : '';
+// PROSES ABSEN VERSI BARU (TANPA REPOT MULTER)
+app.post('/absen', async (req, res) => {
+    const { nama, tipe, lat, lon, fotoBase64 } = req.body;
 
     if (!lat || !lon) return res.redirect(`/absen?user=${nama}&error=GPS wajib aktif!`);
-    if (!fotoPath) return res.redirect(`/absen?user=${nama}&error=Foto selfie wajib diambil!`);
+    if (!fotoBase64) return res.redirect(`/absen?user=${nama}&error=Foto selfie wajib diambil!`);
 
     try {
-        // Validasi 1 kali absen tipe yang sama dalam 1 hari
         const cekQuery = `SELECT id FROM absensi WHERE nama = $1 AND tipe = $2 AND waktu::date = CURRENT_DATE`;
         const cekAbsen = await pool.query(cekQuery, [nama, tipe]);
         if (cekAbsen.rowCount > 0) return res.redirect(`/absen?user=${nama}&error=Gagal! Kamu sudah melakukan Absen ${tipe} hari ini.`);
@@ -181,8 +169,9 @@ app.post('/absen', upload.single('foto'), async (req, res) => {
         if (tipe === 'Masuk' && jamSekarangString > config.jam_masuk) statusWaktu = 'Terlambat';
         else if (tipe === 'Pulang' && jamSekarangString < config.jam_pulang) statusWaktu = 'Pulang Cepat';
 
+        // Langsung simpan string Base64 ke kolom foto
         await pool.query("INSERT INTO absensi (nama, tipe, lokasi, jarak, foto, status_waktu) VALUES ($1, $2, $3, $4, $5, $6)", 
-            [nama, tipe, `${lat},${lon}`, `${Math.round(jarakMeter)} meter`, fotoPath, statusWaktu]);
+            [nama, tipe, `${lat},${lon}`, `${Math.round(jarakMeter)} meter`, fotoBase64, statusWaktu]);
         
         res.redirect(`/absen?user=${nama}&success=Absen ${tipe} Berhasil (${statusWaktu})!`);
     } catch (err) { res.status(500).send("Error server absensi"); }

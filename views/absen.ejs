@@ -23,13 +23,13 @@
             <% if (success) { %><div class="bg-green-50 text-green-600 p-3 rounded-xl mb-4 text-sm font-medium border border-green-100"><%= success %></div><% } %>
 
             <p class="text-xs font-bold text-gray-500 uppercase mb-2">Verifikasi Wajah (Selfie)</p>
-            <div class="mb-4 bg-gray-900 rounded-2xl overflow-hidden aspect-video relative flex items-center justify-center shadow-inner">
+            <div class="mb-4 bg-gray-990 rounded-2xl overflow-hidden aspect-video relative flex items-center justify-center shadow-inner">
                 <video id="webcam" autoplay playsinline class="w-full h-full object-cover"></video>
                 <canvas id="canvas" class="hidden absolute top-0 left-0 w-full h-full object-cover"></canvas>
             </div>
             <button type="button" id="btnAmbilFoto" class="w-full bg-gray-100 border border-gray-200 text-gray-700 py-2.5 rounded-xl mb-6 text-sm font-bold hover:bg-gray-200 transition">📸 Ambil Foto Selfie</button>
 
-            <form action="/absen" method="POST" enctype="multipart/form-data" class="space-y-4">
+            <form action="/absen" method="POST" class="space-y-4">
                 <input type="hidden" name="nama" value="<%= user %>">
                 <div>
                     <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Pilih Status Kehadiran</label>
@@ -39,7 +39,7 @@
                     </select>
                 </div>
                 <input type="hidden" name="lat" id="lat"><input type="hidden" name="lon" id="lon">
-                <input type="file" name="foto" id="fotoFile" class="hidden" required>
+                <input type="hidden" name="fotoBase64" id="fotoBase64" required>
                 <button type="submit" class="w-full bg-black text-white font-bold py-3.5 rounded-xl text-base hover:bg-gray-900 transition active:scale-[0.98]">Kirim Absensi Sekarang</button>
             </form>
         </div>
@@ -49,14 +49,16 @@
     <script>
         const video = document.getElementById('webcam'); const canvas = document.getElementById('canvas'); const btnFoto = document.getElementById('btnAmbilFoto');
         navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } }).then(stream => video.srcObject = stream);
+        
         btnFoto.addEventListener('click', () => {
             const ctx = canvas.getContext('2d'); canvas.width = video.videoWidth; canvas.height = video.videoHeight;
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height); canvas.classList.remove('hidden');
-            canvas.toBlob(blob => {
-                const file = new File([blob], "selfie.jpg", { type: "image/jpeg" }); const container = new DataTransfer(); container.items.add(file);
-                document.getElementById('fotoFile').files = container.files;
-                btnFoto.innerText = "✅ Foto Berhasil Diambil"; btnFoto.classList.add("bg-green-50", "text-green-600", "border-green-200");
-            }, 'image/jpeg');
+            
+            // Konversi gambar langsung menjadi string teks Base64
+            const dataURL = canvas.toDataURL('image/jpeg', 0.7); // Kompresi 70% agar hemat memori database
+            document.getElementById('fotoBase64').value = dataURL;
+            
+            btnFoto.innerText = "✅ Foto Berhasil Diambil"; btnFoto.classList.add("bg-green-50", "text-green-600", "border-green-200");
         });
         navigator.geolocation.getCurrentPosition(p => { document.getElementById('lat').value = p.coords.latitude; document.getElementById('lon').value = p.coords.longitude; });
     </script>
