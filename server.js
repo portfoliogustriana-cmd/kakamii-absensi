@@ -13,10 +13,10 @@ const pool = new Pool({
     ssl: { rejectUnauthorized: false }
 });
 
-// Inisialisasi Database Supabase
+// Otomatis Membuat Tabel & Data Awal di Supabase saat aplikasi menyala
 async function inisialisasiDatabase() {
     try {
-        // Kolom foto diubah menjadi TEXT agar muat menampung string Base64 gambar
+        // 1. Tabel Absensi
         await pool.query(`CREATE TABLE IF NOT EXISTS absensi (
             id SERIAL PRIMARY KEY,
             nama TEXT,
@@ -28,6 +28,7 @@ async function inisialisasiDatabase() {
             status_waktu TEXT
         )`);
 
+        // 2. Tabel Karyawan
         await pool.query(`CREATE TABLE IF NOT EXISTS karyawan (
             id SERIAL PRIMARY KEY,
             username TEXT UNIQUE,
@@ -36,6 +37,7 @@ async function inisialisasiDatabase() {
             jawaban TEXT
         )`);
 
+        // 3. Tabel Pengaturan Kantor
         await pool.query(`CREATE TABLE IF NOT EXISTS pengaturan (
             id INTEGER PRIMARY KEY,
             lat REAL,
@@ -46,10 +48,12 @@ async function inisialisasiDatabase() {
             password_admin TEXT
         )`);
 
+        // ISI DATA DEFAULT: Jika data pengaturan (admin) belum ada, buat otomatis!
         const cekConfig = await pool.query("SELECT id FROM pengaturan WHERE id = 1");
         if (cekConfig.rowCount === 0) {
             await pool.query(`INSERT INTO pengaturan (id, lat, lon, radius, jam_masuk, jam_pulang, password_admin) 
                               VALUES (1, -6.175392, 106.827153, 100, '08:00', '17:00', 'admin123')`);
+            console.log("Data Admin default berhasil dimasukkan!");
         }
         console.log("Database Supabase Berhasil Diinisialisasi!");
     } catch (err) {
