@@ -10,7 +10,10 @@ const connectionString = "postgresql://postgres:cdaaptnia26@db.xdmkxpnfewqnzahek
 
 const pool = new Pool({
     connectionString: connectionString,
-    ssl: { rejectUnauthorized: false }
+    ssl: { rejectUnauthorized: false },
+    max: 1, // Membatasi jumlah koneksi agar tidak merusak kuota gratisan Supabase
+    idleTimeoutMillis: 2000, // Memutus koneksi otomatis jika idle agar Vercel tidak hang
+    connectionTimeoutMillis: 5000 // Batas maksimal menunggu respon database (5 detik)
 });
 
 // Otomatis Membuat Tabel & Data Awal di Supabase saat aplikasi menyala
@@ -80,7 +83,15 @@ function hitungJarak(lat1, lon1, lat2, lon2) {
 
 // --- ROUTES ---
 
-app.get('/', (req, res) => { res.render('login', { error: null, success: req.query.success || null }); });
+app.get('/', async (req, res) => { 
+    try {
+        // Memastikan tabel terbuat tepat saat halaman utama dibuka di internet
+        await inisialisasiDatabase(); 
+        res.render('login', { error: null, success: req.query.success || null }); 
+    } catch (err) {
+        res.render('login', { error: "Gagal menghubungkan database cloud, coba muat ulang halaman.", success: null });
+    }
+});
 
 app.post('/login', async (req, res) => {
     const { username, password } = req.body;
